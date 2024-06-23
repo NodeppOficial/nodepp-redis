@@ -7,10 +7,6 @@ Run **Redis** in Nodepp
   - 🪟: `pacman -S mingw-w64-x86_64-hiredis`
   - 🐧: `sudo apt install libhiredis-dev`
 
-- Openssl
-  - 🪟: `pacman -S mingw-w64-ucrt-x86_64-openssl`
-  - 🐧: `sudo apt install libssl-dev`
-
 ## Example
 ```cpp
 #include <nodepp/nodepp.h>
