@@ -1,5 +1,5 @@
-#ifndef NODEPP_SQLITE
-#define NODEPP_SQLITE
+#ifndef NODEPP_REDIS
+#define NODEPP_REDIS
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
