@@ -10,7 +10,7 @@ Run **Redis** in Nodepp
 ## Example
 ```cpp
 #include <nodepp/nodepp.h>
-#include <redis.h>
+#include <http.h>
 
 using namespace nodepp;
 
@@ -18,7 +18,7 @@ void onMain() {
 
     redis_t db ("db://auth@localhost:8000");
 
-    db.exec(R"( SET FOO BAT )");
+    db.exec(" SET FOO BAT ");
 
     db.exec("GET FOO",[]( string_t data ){
         console::log( "->", data )
