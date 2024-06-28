@@ -46,6 +46,10 @@ public:
     
     redis_http_t ( string_t uri ) : obj( new NODE ) {
 
+        if( !url::is_valid( uri ) ){ 
+            process::error("Invalid Redis Url");
+        }
+
         auto host = url::hostname( uri );
         auto port = url::port( uri );
         auto auth = url::auth( uri );
@@ -71,7 +75,11 @@ public:
         obj->fd.socket( dns::lookup(host), port ); 
         obj->fd.set_sockopt( agent ); obj->fd.connect();
 
-        if( !Auth.empty() ){ obj->fd.write( Auth ); }
+        if( !Auth.empty() ){ 
+            obj->fd.write( Auth ); auto data = obj->fd.read();
+        if( regex::test( data, "error", true ) )
+          { process::error( data ); }  
+        }
 
     }
     
@@ -86,12 +94,17 @@ public:
         } while( data.slice(-2) != "\r\n" );
 
         if( !data.empty() ){ cb( data.slice(0,-2) ); }
-
     }
 
-    void exec( const string_t& cmd ) const {
+    string_t exec( const string_t& cmd ) const {
         if( obj->state == 0 || obj->fd.is_closed() )
-          { return; } obj->fd.write( cmd + "\n" ); 
+          { return nullptr; }  obj->fd.write( cmd + "\n" ); 
+
+        string_t data; do { 
+            data += obj->fd.read();
+        } while( data.slice(-2) != "\r\n" );
+
+        return data;
     }
 
 };}
