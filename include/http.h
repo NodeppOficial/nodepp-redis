@@ -124,40 +124,16 @@ public:
     void exec( const string_t& cmd, const function_t<void,string_t>& cb ) const {
         if( obj->state == 0 || obj->fd.is_closed() )
           { return; }  obj->fd.write( cmd + "\n" ); 
-        _redis_::cb _cb_; 
-        process::add( _cb_, obj->fd, cb );
+        _redis_::cb _cb_; process::add( _cb_, obj->fd, cb );
     }
 
     array_t<string_t> exec( const string_t& cmd ) const {
         if( obj->state == 0 || obj->fd.is_closed() )
-          { return nullptr; }  obj->fd.write( cmd + "\n" ); 
+          { return nullptr; } obj->fd.write( cmd + "\n" ); 
+            array_t<string_t> res;
 
-        ptr_t<ulong> pos ({ 1, 0 }); 
-        array_t<string_t> res; 
-        string_t raw;
-
-        START:; raw = obj->fd.read_line();
-
-        if( !regex::test( raw, "[$*:]-?\\d+" ) ){ process::error( raw.slice(0,-2) ); }
-        if(  regex::test( raw, "[$*]-1",true ) ){ goto END; }
-
-        if( regex::test( raw, "[*]\\d+" ) ){
-            pos[0] = string::to_ulong( regex::match( raw, "\\d+" ) );
-            if( pos[0] == 0 ){ goto END; } goto START;
-        } elif( regex::test( raw, "[$]\\d+" ) ) {
-            pos[1] = string::to_ulong( regex::match( raw, "\\d+" ) ) + 2;
-        } elif( regex::test( raw, "[:]\\d+" ) ) {
-            res.push( regex::match( raw, "\\d+" ) );
-        }
-
-        while( pos[0]-->0 ){ string_t data;
-        while( data.size() != pos[1] ){
-               data += obj->fd.read( pos[1]-data.size() );
-        }      res.push( data.slice( 0,-2 ) );
-        if ( pos[0] != 0 ){ goto START; }
-        }
-
-        END:; return res;
+        function_t<void,string_t> cb([&]( string_t data ){ res.push( data ); });
+        _redis_::cb _cb_; process::await( _cb_, obj->fd, cb ); return res;
     }
     
     /*─······································································─*/
