@@ -1,12 +1,6 @@
 # NODEPP-REDIS
 Run **Redis** in Nodepp
 
-## Dependencies
-
-- libhiredis-dev
-  - 🪟: `pacman -S mingw-w64-x86_64-hiredis`
-  - 🐧: `sudo apt install libhiredis-dev`
-
 ## Example
 ```cpp
 #include <nodepp/nodepp.h>
@@ -28,4 +22,4 @@ void onMain() {
 ```
 
 ## Compilation
-`g++ -o main main.cpp -I ./include -lhiredis ; ./main`
+`g++ -o main main.cpp -I ./include ; ./main`
