@@ -54,8 +54,7 @@ public:
         auto auth = url::auth( uri );
         auto user = url::user( uri );
         auto pass = url::pass( uri );
-
-        string_t Auth = nullptr;
+        auto Auth = string_t();
 
         if( !user.empty() && !pass.empty() ){
              Auth = string::format("AUTH %s %s\n", user.get(), pass.get() );
@@ -72,11 +71,7 @@ public:
         obj->fd.socket( dns::lookup(host), port ); 
         obj->fd.set_sockopt( agent ); obj->fd.connect(); 
 
-        if( !Auth.empty() ){ 
-            obj->fd.write( Auth ); auto data = obj->fd.read();
-        if( regex::test( data, "error", true ) )
-          { process::error( data ); }  
-        }
+        if( !Auth.empty() ){ exec( Auth ); }
 
     }
     
@@ -84,24 +79,65 @@ public:
 
     void exec( const string_t& cmd, const function_t<void,string_t>& cb ) const {
         if( obj->state == 0 || obj->fd.is_closed() )
-          { return; } obj->fd.write( cmd + "\n" ); 
+          { return; }  obj->fd.write( cmd + "\n" ); 
 
-        string_t data; do { 
-            data += obj->fd.read();
-        } while( data.slice(-2) != "\r\n" );
+        ptr_t<ulong> pos ({ 1, 0 }); string_t raw;
+
+        START:; raw = obj->fd.read_line();
         
-        if( !data.empty() ){ cb( data ); }
+        if( !regex::test( raw, "[$*]-?\\d+" ) ){ process::error( raw.slice(0,-2) ); }
+        if(  regex::test( raw, "[$*]-1", true ) ){ return; }
+
+        if( regex::test( raw, "[*]\\d+" ) ){
+            pos[0] = string::to_ulong( regex::match( raw, "\\d+" ) ); goto START;
+        } elif( regex::test( raw, "[$]\\d+" ) ) {
+            pos[1] = string::to_ulong( regex::match( raw, "\\d+" ) ) + 2;
+        }
+
+        while( pos[0]-->0 ){ string_t data;
+        while( data.size() != pos[1] ){
+               data += obj->fd.read( pos[1]-data.size() );
+        }      cb( data.slice( 0,-2 ) );
+        if ( pos[0] != 0 ){ goto START; }
+        }
+
     }
 
-    string_t exec( const string_t& cmd ) const {
+    array_t<string_t> exec( const string_t& cmd ) const {
         if( obj->state == 0 || obj->fd.is_closed() )
           { return nullptr; }  obj->fd.write( cmd + "\n" ); 
 
-        string_t data; do { 
-            data += obj->fd.read();
-        } while( data.slice(-2) != "\r\n" );
+        ptr_t<ulong> pos ({ 1, 0 }); 
+        array_t<string_t> res; 
+        string_t raw;
 
-        return data;
+        START:; raw = obj->fd.read_line();
+        
+        if( !regex::test( raw, "[$*]-?\\d+" ) ){ process::error( raw.slice(0,-2) ); }
+        if(  regex::test( raw, "[$*]-1", true ) ){ return res; }
+
+        if( regex::test( raw, "[*]\\d+" ) ){
+            pos[0] = string::to_ulong( regex::match( raw, "\\d+" ) ); goto START;
+        } elif( regex::test( raw, "[$]\\d+" ) ) {
+            pos[1] = string::to_ulong( regex::match( raw, "\\d+" ) ) + 2;
+        }
+
+        while( pos[0]-->0 ){ string_t data;
+        while( data.size() != pos[1] ){
+               data += obj->fd.read( pos[1]-data.size() );
+        }      res.push( data.slice( 0,-2 ) );
+        if ( pos[0] != 0 ){ goto START; }
+        }
+
+        return res;
+    }
+    
+    /*─······································································─*/
+
+    string_t raw( const string_t& cmd ) const noexcept {
+        if( obj->state == 0 || obj->fd.is_closed() )
+          { return nullptr; }  obj->fd.write( cmd + "\n" );
+        return obj->fd.read();
     }
 
 };}
