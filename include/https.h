@@ -89,9 +89,12 @@ public:
         if(  regex::test( raw, "[$*]-1",true ) ){ return; }
 
         if( regex::test( raw, "[*]\\d+" ) ){
-            pos[0] = string::to_ulong( regex::match( raw, "\\d+" ) ); goto START;
+            pos[0] = string::to_ulong( regex::match( raw, "\\d+" ) );
+            if( pos[0] == 0 ){ return; } goto START;
         } elif( regex::test( raw, "[$]\\d+" ) ) {
             pos[1] = string::to_ulong( regex::match( raw, "\\d+" ) ) + 2;
+        } elif( regex::test( raw, "[:]\\d+" ) ) {
+            cb( regex::match( raw, "\\d+" ) );
         }
 
         while( pos[0]-->0 ){ string_t data;
@@ -114,12 +117,15 @@ public:
         START:; raw = obj->fd.read_line();
         
         if( !regex::test( raw, "[$*:]-?\\d+" ) ){ process::error( raw.slice(0,-2) ); }
-        if(  regex::test( raw, "[$*]-1 | :-?\\d+", true ) ){ return res; }
+        if(  regex::test( raw, "[$*]-1",true ) ){ goto END; }
 
         if( regex::test( raw, "[*]\\d+" ) ){
-            pos[0] = string::to_ulong( regex::match( raw, "\\d+" ) ); goto START;
+            pos[0] = string::to_ulong( regex::match( raw, "\\d+" ) );
+            if( pos[0] == 0 ){ goto END; } goto START;
         } elif( regex::test( raw, "[$]\\d+" ) ) {
             pos[1] = string::to_ulong( regex::match( raw, "\\d+" ) ) + 2;
+        } elif( regex::test( raw, "[:]\\d+" ) ) {
+            res.push( regex::match( raw, "\\d+" ) );
         }
 
         while( pos[0]-->0 ){ string_t data;
@@ -129,7 +135,7 @@ public:
         if ( pos[0] != 0 ){ goto START; }
         }
 
-        return res;
+        END:; return res;
     }
     
     /*─······································································─*/
