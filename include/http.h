@@ -19,6 +19,50 @@
 #include <nodepp/tcp.h>
 #include <nodepp/url.h>
 
+/*────────────────────────────────────────────────────────────────────────────*/
+
+#ifndef NODEPP_REDIS_GENERATOR
+#define NODEPP_REDIS_GENERATOR
+
+namespace nodepp { namespace _redis_ { GENERATOR( cb ){
+protected:
+    
+    string_t raw, data;
+    ptr_t<ulong> pos; 
+
+public:
+
+    template< class T, class V > gnEmit( T& fd, V& cb ){
+    gnStart pos = ptr_t<ulong>({ 1, 0 }); coYield(1); raw = fd.read_line();
+        
+        if( !regex::test( raw, "[$*:]-?\\d+" ) ){ process::error( raw.slice(0,-2) ); }
+        if(  regex::test( raw, "[$*]-1",true ) ){ coEnd; }
+
+        if( regex::test( raw, "[*]\\d+" ) ){
+            pos[0] = string::to_ulong( regex::match( raw, "\\d+" ) );
+            if( pos[0] == 0 ){ coEnd; } coGoto(1);
+        } elif( regex::test( raw, "[$]\\d+" ) ) {
+            pos[1] = string::to_ulong( regex::match( raw, "\\d+" ) ) + 2;
+        } elif( regex::test( raw, "[:]\\d+" ) ) {
+            cb( regex::match( raw, "\\d+" ) );
+        }
+
+        while( pos[0]-->0 ){ data.clear();
+        while( data.size() != pos[1] ){
+               data += fd.read( pos[1]-data.size() );
+        }      cb( data.slice( 0,-2 ) ); coNext;
+        if ( pos[0] != 0 ){ coGoto(1); }
+        }
+
+    gnStop
+    }
+
+};}}
+
+#endif
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
 namespace nodepp { class redis_http_t {
 protected:
 
@@ -80,30 +124,8 @@ public:
     void exec( const string_t& cmd, const function_t<void,string_t>& cb ) const {
         if( obj->state == 0 || obj->fd.is_closed() )
           { return; }  obj->fd.write( cmd + "\n" ); 
-
-        ptr_t<ulong> pos ({ 1, 0 }); string_t raw;
-
-        START:; raw = obj->fd.read_line();
-        
-        if( !regex::test( raw, "[$*:]-?\\d+" ) ){ process::error( raw.slice(0,-2) ); }
-        if(  regex::test( raw, "[$*]-1",true ) ){ return; }
-
-        if( regex::test( raw, "[*]\\d+" ) ){
-            pos[0] = string::to_ulong( regex::match( raw, "\\d+" ) );
-            if( pos[0] == 0 ){ return; } goto START;
-        } elif( regex::test( raw, "[$]\\d+" ) ) {
-            pos[1] = string::to_ulong( regex::match( raw, "\\d+" ) ) + 2;
-        } elif( regex::test( raw, "[:]\\d+" ) ) {
-            cb( regex::match( raw, "\\d+" ) );
-        }
-
-        while( pos[0]-->0 ){ string_t data;
-        while( data.size() != pos[1] ){
-               data += obj->fd.read( pos[1]-data.size() );
-        }      cb( data.slice( 0,-2 ) );
-        if ( pos[0] != 0 ){ goto START; }
-        }
-
+        _redis_::cb _cb_; 
+        process::add( _cb_, obj->fd, cb );
     }
 
     array_t<string_t> exec( const string_t& cmd ) const {
