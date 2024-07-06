@@ -85,8 +85,8 @@ public:
 
         START:; raw = obj->fd.read_line();
         
-        if( !regex::test( raw, "[$*]-?\\d+" ) ){ process::error( raw.slice(0,-2) ); }
-        if(  regex::test( raw, "[$*]-1", true ) ){ return; }
+        if( !regex::test( raw, "[$*:]-?\\d+" ) ){ process::error( raw.slice(0,-2) ); }
+        if(  regex::test( raw, "[$*]-1 | :-?\\d+", true ) ){ return; }
 
         if( regex::test( raw, "[*]\\d+" ) ){
             pos[0] = string::to_ulong( regex::match( raw, "\\d+" ) ); goto START;
@@ -113,8 +113,8 @@ public:
 
         START:; raw = obj->fd.read_line();
         
-        if( !regex::test( raw, "[$*]-?\\d+" ) ){ process::error( raw.slice(0,-2) ); }
-        if(  regex::test( raw, "[$*]-1", true ) ){ return res; }
+        if( !regex::test( raw, "[$*:]-?\\d+" ) ){ process::error( raw.slice(0,-2) ); }
+        if(  regex::test( raw, "[$*]-1 | :-?\\d+", true ) ){ return res; }
 
         if( regex::test( raw, "[*]\\d+" ) ){
             pos[0] = string::to_ulong( regex::match( raw, "\\d+" ) ); goto START;
