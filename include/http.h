@@ -34,9 +34,10 @@ public:
 
     template< class T, class V > gnEmit( T& fd, V& cb ){
     gnStart pos = ptr_t<ulong>({ 1, 0 }); coYield(1); raw = fd.read_line();
-        
-        if( !regex::test( raw, "[$*:]-?\\d+" ) ){ process::error( raw.slice(0,-2) ); }
+
         if(  regex::test( raw, "[$*]-1",true ) ){ coEnd; }
+        if(  regex::test( raw, "^[+]" ) || raw.empty() ){ coEnd; }
+        if( !regex::test( raw, "[$*:]-?\\d+" ) ){ process::error( raw.slice(0,-2) ); }
 
         if( regex::test( raw, "[*]\\d+" ) ){
             pos[0] = string::to_ulong( regex::match( raw, "\\d+" ) );
@@ -44,7 +45,7 @@ public:
         } elif( regex::test( raw, "[$]\\d+" ) ) {
             pos[1] = string::to_ulong( regex::match( raw, "\\d+" ) ) + 2;
         } elif( regex::test( raw, "[:]\\d+" ) ) {
-            cb( regex::match( raw, "\\d+" ) );
+            cb( regex::match( raw, "\\d+" ) ); coEnd;
         }
 
         while( pos[0]-->0 ){ data.clear();
@@ -88,7 +89,6 @@ public:
     /*─······································································─*/
     
     redis_http_t ( string_t uri ) : obj( new NODE ) {
-
         if( !url::is_valid( uri ) ){ 
             process::error("Invalid Redis Url");
         }
@@ -113,8 +113,12 @@ public:
         obj->fd = socket_t();
         obj->fd.IPPROTO = IPPROTO_TCP;
         obj->fd.socket( dns::lookup(host), port ); 
-        obj->fd.set_sockopt( agent ); obj->fd.connect();
+        obj->fd.set_sockopt( agent );
 
+        if( obj->fd.connect() < 0 ){ 
+            process::error("While Connecting to Redis");
+        }
+        
         if( !Auth.empty() ){ exec( Auth ); }
 
     }
@@ -124,7 +128,8 @@ public:
     void exec( const string_t& cmd, const function_t<void,string_t>& cb ) const {
         if( obj->state == 0 || obj->fd.is_closed() )
           { return; }  obj->fd.write( cmd + "\n" ); 
-        _redis_::cb _cb_; process::add( _cb_, obj->fd, cb );
+
+        _redis_::cb task; process::add( task, obj->fd, cb );
     }
 
     array_t<string_t> exec( const string_t& cmd ) const {
@@ -133,7 +138,7 @@ public:
             array_t<string_t> res;
 
         function_t<void,string_t> cb([&]( string_t data ){ res.push( data ); });
-        _redis_::cb _cb_; process::await( _cb_, obj->fd, cb ); return res;
+        _redis_::cb task; process::await( task, obj->fd, cb ); return res;
     }
     
     /*─······································································─*/
