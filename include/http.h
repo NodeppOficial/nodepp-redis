@@ -32,7 +32,7 @@ protected:
 
 public:
 
-    template< class T, class V > gnEmit( T& fd, V& cb ){
+    template< class T, class V, class U > gnEmit( T& fd, V& cb, U& self ){
     gnStart pos = ptr_t<ulong>({ 1, 0 }); coYield(1); raw = fd.read_line();
 
         if(  regex::test( raw, "[$*]-1",true ) ){ coEnd; }
@@ -83,7 +83,7 @@ public:
 
     virtual void free() const noexcept {
         if( obj->state == 0 ){ return; }
-            obj->state  = 0; 
+            obj->state  = 0; obj->fd.free();
     }
     
     /*─······································································─*/
@@ -129,7 +129,8 @@ public:
         if( obj->state == 0 || obj->fd.is_closed() )
           { return; }  obj->fd.write( cmd + "\n" ); 
 
-        _redis_::cb task; process::add( task, obj->fd, cb );
+        auto self = type::bind( this );
+        _redis_::cb task; process::add( task, obj->fd, cb, self );
     }
 
     array_t<string_t> exec( const string_t& cmd ) const {
@@ -137,8 +138,9 @@ public:
           { return nullptr; } obj->fd.write( cmd + "\n" ); 
             array_t<string_t> res;
 
+        auto self = type::bind( this );
         function_t<void,string_t> cb([&]( string_t data ){ res.push( data ); });
-        _redis_::cb task; process::await( task, obj->fd, cb ); return res;
+        _redis_::cb task; process::await( task, obj->fd, cb, self ); return res;
     }
     
     /*─······································································─*/
