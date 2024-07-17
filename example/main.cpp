@@ -1,6 +1,6 @@
 
 #include <nodepp/nodepp.h>
-#include <http.h>
+#include <redis/http.h>
 
 using namespace nodepp;
 

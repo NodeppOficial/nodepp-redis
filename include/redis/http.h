@@ -112,6 +112,7 @@ public:
 
         obj->fd = socket_t();
         obj->fd.IPPROTO = IPPROTO_TCP;
+        obj->fd.onError([]( ... ){ });
         obj->fd.socket( dns::lookup(host), port ); 
         obj->fd.set_sockopt( agent );
 
