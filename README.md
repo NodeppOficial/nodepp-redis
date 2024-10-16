@@ -1,5 +1,5 @@
 # NODEPP-REDIS
-Run **Redis** in Nodepp
+Run a **Redis** client in Nodepp
 
 ## Example
 ```cpp
@@ -22,4 +22,6 @@ void onMain() {
 ```
 
 ## Compilation
-`g++ -o main main.cpp -I ./include ; ./main`
+``` bash
+g++ -o main main.cpp -I ./include ; ./main
+```
