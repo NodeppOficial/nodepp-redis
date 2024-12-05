@@ -124,6 +124,8 @@ public:
 
     }
     
+    redis_http_t () : obj( new NODE ) { obj->state = 0; }
+    
     /*─······································································─*/
 
     void exec( const string_t& cmd, const function_t<void,string_t>& cb ) const {
